@@ -56,21 +56,24 @@ class Node():
           infs = self.influencers[r]
           del infs[index]
 
+  def get_dist_from(self, x, y):
+    xdist = abs(self.x - x)
+    ydist = abs(self.y - y)
+    return math.sqrt(xdist**2 + ydist**2)
+
   def getInfluence(self, r):
     total = 0
     if not r in self.influencers.keys():
         return total
     for inf in self.influencers[r]:
-      xdist = abs(self.x - inf.x)
-      ydist = abs(self.y - inf.y)
-      dist = math.sqrt(xdist**2 + ydist**2)
-      total += inf.res[r] * (inf.falloff ** dist)
+      dist = self.get_dist_from(inf.x, inf.y)
+      total += inf.res[r] * (inf.strength_at_dist(dist))
     return total
 
 
 # Create grid
-totalRows = 10
-totalCols = 10
+totalRows = 30
+totalCols = 30
 for row in range(totalRows):
   for col in range(totalCols):
     nodes.append(Node(col, row))
@@ -79,15 +82,33 @@ print("Total nodes: {0}".format(len(nodes)))
 def grid_to_node_index(x, y):
   return y*totalCols + x
 
-def find_nearest_nodes(x, y):
+def find_nearest_adjacent_nodes(x, y):
   nearest = list()
+  if x < 0 or x > totalCols-1 or y < 0 or y > totalCols-1:
+    print("Error: searching for point outside of grid!")
+    return nearest
   nearest.append(nodes[grid_to_node_index(math.floor(x), math.floor(y))])
   nearest.append(nodes[grid_to_node_index(math.floor(x), math.ceil(y))])
   nearest.append(nodes[grid_to_node_index(math.ceil(x), math.floor(y))])
   nearest.append(nodes[grid_to_node_index(math.ceil(x), math.ceil(y))])
-  if len(nearest) != 4:
-    print("Error: searching for point outside of grid!")
   return nearest
+
+# ASSUMPTION WARNING #
+# This method fails if there can be node A that is not within distance
+# but has a neighbour node B which is and will not otherwise be reached.
+# Convex shapes and multiple start points should make this safe.
+def find_nodes_within_distance(x, y, dist):
+  leaves = list()
+  for n in find_nearest_adjacent_nodes(x, y):
+      if n.get_dist_from(x, y) < dist:
+          leaves.append(n)
+  for n in leaves:
+      for neighbour in n.neighbours:
+          if neighbour in leaves:
+              continue
+          if neighbour.get_dist_from(x, y) < dist:
+              leaves.append(neighbour)
+  return leaves
 
 # Artificially enforce node neighbours
 for row in range(totalRows):
@@ -123,12 +144,14 @@ for n in nodes:
 
 # Influencers can increase supply in surrounding area
 class Influencer:
-  def __init__(self, x, y, res, falloff=0.25):
+  def __init__(self, x, y, res, max_dist=2):
+    # Attributes
     self.x = x
     self.y = y
     self.res = res
-    self.falloff = falloff
     self.inf_nodes = list()
+    self.max_dist = max_dist
+    # Setup
     self.updateNodes(True)
 
   def updateNodes(self, on_create = False):
@@ -137,8 +160,15 @@ class Influencer:
       pass
     else:
       # New influences must fin
-      for n in find_nearest_nodes(self.x, self.y):
+      for n in find_nodes_within_distance(self.x, self.y, self.max_dist):
           n.addInfluencer(self)
+
+  def strength_at_dist(self, dist):
+      if dist > self.max_dist:
+          return 0
+      # 0 at max_dist
+      # 1 at same location
+      return (1 - dist/self.max_dist)
 
 num_inf = 2
 num_inf_res = 2
@@ -148,7 +178,7 @@ for i in range(num_inf):
   for c in choices:
     res[c.name] = random.randint(c.low, 9)#c.high)
   print(res)
-  inf = Influencer(random.random()*(totalCols-1), random.random()*(totalRows-1), res)
+  inf = Influencer(random.random()*(totalCols-1), random.random()*(totalRows-1), res, 5)
 
 # Print resource grids
 for r in base_resources:
