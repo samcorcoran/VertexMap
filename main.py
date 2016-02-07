@@ -129,7 +129,10 @@ for row in range(totalRows):
     if row < totalRows-1:
       n.addNeighbour(nodes[index+totalCols])
 
-# Test neighbour count by drawing as grid
+# Draw grid of neighbour numbers
+print("The following grid shows an integer in place of each\n"
+      "vertex, representing how many neighbouring vertices\n"
+      "it has.")
 for row in range(totalRows):
   rowstr = ""
   for col in range(totalCols):
@@ -170,17 +173,27 @@ class Influencer:
       # 1 at same location
       return (1 - dist/self.max_dist)
 
+# Create some randomly located influencers
 num_inf = 2
 num_inf_res = 2
+min_inf_dist = 2
+max_inf_dist = 6
+print("Some influencers are created at random locations with\n"
+      "random resource types.")
 for i in range(num_inf):
   res = dict()
   choices = random.sample(base_resources, num_inf_res)
   for c in choices:
     res[c.name] = random.randint(c.low, 9)#c.high)
   print(res)
-  inf = Influencer(random.random()*(totalCols-1), random.random()*(totalRows-1), res, 5)
+  inf = Influencer(random.random()*(totalCols-1), random.random()*(totalRows-1), res, random.randint(min_inf_dist, max_inf_dist))
 
 # Print resource grids
+print("The following grids state their resource type and\n"
+      "show a (rounded) value for the resource availability\n"
+      "at each vertex.\n"
+      "Grids are...\n"
+      "1. Local availability\t" + "\t\t2. Local + Neighbouring\t" + "\t\t3. Influencer Contributions")
 for r in base_resources:
   print(r.name)
   for row in range(totalRows):
@@ -197,5 +210,5 @@ for r in base_resources:
       rowstr += str(local)
       surround_rowstr += str(local+surround)
       inf_rowstr += str(influence)
-    print(rowstr + "   " + surround_rowstr + "   " + inf_rowstr)
+    print(rowstr + "\t" + surround_rowstr + "\t" + inf_rowstr)
   print()
