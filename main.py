@@ -5,6 +5,9 @@ import math
 
 nodes = list()
 
+totalRows = 30
+totalCols = 30
+
 class Resource:
   def __init__(self, name, low=1, high=2, falloff=0.25):
     self.name = name
@@ -70,14 +73,48 @@ class Node():
       total += inf.res[r] * (inf.strength_at_dist(dist))
     return total
 
+def createRectangularGrid():
+  for row in range(totalRows):
+    for col in range(totalCols):
+      nodes.append(Node(col, row))
+  # Artificially enforce node neighbours
+  for row in range(totalRows):
+    for col in range(totalCols):
+      index = row*totalCols + col
+      #print("Ind {0} (x{1}, y{2})".format(index, col, row))
+      n = nodes[index]
+      # Above
+      if row > 0:
+        n.addNeighbour(nodes[index-totalCols])
+      # Left
+      if col > 0:
+        n.addNeighbour(nodes[index-1])
+      # Right
+      if col < totalCols-1:
+        n.addNeighbour(nodes[index+1])
+      # Below
+      if row < totalRows-1:
+        n.addNeighbour(nodes[index+totalCols])
 
-# Create grid
-totalRows = 30
-totalCols = 30
-for row in range(totalRows):
+def createCylindricalGrid():
+  createRectangularGrid()
+  # Sew sides together
+  for row in range(totalRows):
+    # Attach furthest left to furthest right
+    left = nodes[row*totalCols]
+    right = nodes[row*totalCols+totalCols-1]
+    left.addNeighbour(right)
+    right.addNeighbour(left)
+
+def createToroidalGrid():
+  createCylindricalGrid()
+  # Sew top and bottom together
   for col in range(totalCols):
-    nodes.append(Node(col, row))
-print("Total nodes: {0}".format(len(nodes)))
+    # Attach furthest left to furthest right
+    top = nodes[col]
+    bottom = nodes[(totalRows-1)*totalCols + col]
+    top.addNeighbour(bottom)
+    bottom.addNeighbour(top)
 
 def grid_to_node_index(x, y):
   return y*totalCols + x
@@ -110,24 +147,13 @@ def find_nodes_within_distance(x, y, dist):
               leaves.append(neighbour)
   return leaves
 
-# Artificially enforce node neighbours
-for row in range(totalRows):
-  for col in range(totalCols):
-    index = row*totalCols + col
-    #print("Ind {0} (x{1}, y{2})".format(index, col, row))
-    n = nodes[index]
-    # Above
-    if row > 0:
-      n.addNeighbour(nodes[index-totalCols])
-    # Left
-    if col > 0:
-      n.addNeighbour(nodes[index-1])
-    # Right
-    if col < totalCols-1:
-      n.addNeighbour(nodes[index+1])
-    # Below
-    if row < totalRows-1:
-      n.addNeighbour(nodes[index+totalCols])
+
+
+# Create grid
+#createRectangularGrid()
+createCylindricalGrid()
+#createToroidalGrid()
+print("Total nodes: {0}".format(len(nodes)))
 
 # Draw grid of neighbour numbers
 print("The following grid shows an integer in place of each\n"
